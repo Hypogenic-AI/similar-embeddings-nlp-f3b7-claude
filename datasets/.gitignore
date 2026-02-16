@@ -1,0 +1,31 @@
+# MUSE bilingual dictionaries (large text files)
+muse/*.txt
+
+# MCL-WiC dataset (cloned repository with large zip files)
+mcl-wic/
+
+# SemEval-2017 Task 2 dataset
+semeval2017-task2/
+
+# General patterns for large data files
+*.zip
+*.tar.gz
+*.tar.bz2
+*.h5
+*.hdf5
+*.bin
+*.pt
+*.pth
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.jar
+
+# Embedding files (can be very large)
+*.vec
+*.model
+
+# Keep this gitignore and README
+!.gitignore
+!README.md

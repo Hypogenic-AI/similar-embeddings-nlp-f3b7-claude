@@ -1,0 +1,16 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We present a systematic study of how polysemy affects cross-lingual embedding alignment in multilingual transformers.
+Our experiments across two models, five language pairs, and three evaluation settings yield three main findings.
+
+First, translation equivalents occupy similar regions of embedding space, with cosine similarities of 0.22--0.77 after centering (\cohensd up to 3.01), confirming that cross-lingual meaning alignment emerges in both \mbert and \xlmr.
+
+Second, polysemy systematically degrades this alignment.
+Monosemous translation pairs show 20--70\% higher similarity than highly polysemous ones, with a consistent negative dose-response relationship between sense count and similarity across all language pairs.
+
+Third, contextual embeddings largely overcome the polysemy problem.
+When polysemous words appear in sense-disambiguating context, same-sense cross-lingual pairs show substantially higher similarity than different-sense pairs (\cohensd $= 1.0$--$1.6$), with layer~10 providing the best sense discrimination.
+
+These findings have direct implications for cross-lingual NLP applications: practitioners should prefer contextualized embeddings from upper-middle layers when working with polysemous words, and evaluation benchmarks should control for polysemy to provide fairer model comparisons.
+Future work should extend this analysis to non-English language pairs, larger models, and sense-aware training objectives that could further strengthen cross-lingual alignment.

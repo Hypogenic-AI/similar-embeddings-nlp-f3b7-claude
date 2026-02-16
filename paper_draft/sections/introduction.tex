@@ -1,0 +1,27 @@
+\section{Introduction}
+\label{sec:intro}
+
+Multilingual transformer models serve billions of users across more than 100 languages, powering machine translation, cross-lingual search, and multilingual question answering.
+A central premise of these models is that words with similar meanings in different languages occupy similar regions of embedding space---even without explicit cross-lingual supervision~\citep{wu2020emerging, pires2019multilingual}.
+But how robust is this alignment when words carry multiple meanings?
+
+Consider the English word ``bank,'' which has 18 senses in \wordnet~\citep{miller1995wordnet}.
+Its French translation ``banque'' captures only the financial sense.
+When a multilingual model maps both words to a single embedding, the English representation must accommodate all 18 senses while the French one concentrates on just one or two.
+Intuitively, this mismatch should reduce their similarity---but by how much, and can context resolve it?
+
+Prior work has established that multilingual models create cross-lingual representations~\citep{wu2020emerging, pires2019multilingual, conneau2020unsupervised} and that polysemy hurts static embedding alignment~\citep{zhang2019crosslingual}.
+However, no systematic study has measured how sense count affects cross-lingual embedding similarity in modern contextual models across multiple language pairs, nor compared type-level and token-level similarity for polysemous words.
+
+We address this gap with a large-scale empirical study across two models (\mbert and \xlmr), five language pairs (EN--FR, EN--DE, EN--ES, EN--RU, EN--ZH), and three complementary evaluation settings.
+We classify English words by polysemy level using \wordnet synset counts and measure how cross-lingual similarity varies with sense count at both the type level (isolated words) and the token level (words in context).
+
+Our main findings are:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+\item We show that translation equivalents have dramatically higher cosine similarity than random pairs (\cohensd up to 3.01), confirming cross-lingual meaning alignment in both \mbert and \xlmr (\secref{sec:exp1}).
+\item We demonstrate that polysemy systematically degrades this alignment: monosemous pairs show 20--70\% higher similarity than highly polysemous pairs, with a consistent negative correlation between sense count and similarity (\secref{sec:exp2}).
+\item We find that contextual embeddings recover sense-level cross-lingual alignment (\cohensd $= 1.0$--$1.6$ between same-sense and different-sense pairs), with layer~10 providing the best sense discrimination (\secref{sec:exp3}).
+\item We validate our approach against human similarity judgments on \semeval Task~2, where \mbert achieves Spearman correlations of 0.36--0.49 after language-specific centering (\secref{sec:exp4}).
+\end{itemize}
+
+The rest of this paper is organized as follows. \Secref{sec:related} reviews related work. \Secref{sec:method} describes our methodology. \Secref{sec:results} presents our experimental results. \Secref{sec:discussion} discusses implications and limitations, and \secref{sec:conclusion} concludes.

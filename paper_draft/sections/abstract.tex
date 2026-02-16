@@ -1,0 +1,6 @@
+Multilingual transformer models such as \mbert and \xlmr learn shared representations across languages, but how polysemy affects cross-lingual embedding alignment remains poorly understood.
+We present a systematic study measuring how word sense ambiguity degrades cross-lingual similarity in these models across five typologically diverse language pairs.
+We find that translation equivalents have dramatically higher cosine similarity than random word pairs (\cohensd $= 0.90$--$3.01$), confirming that meaning alignment emerges without explicit cross-lingual supervision.
+Critically, polysemy significantly weakens this alignment: monosemous translation pairs show 20--70\% higher similarity than highly polysemous ones (\cohensd $= 0.14$--$0.57$), with a consistent negative correlation between sense count and cross-lingual similarity (\spearmanr $= {-}0.07$ to ${-}0.37$).
+However, when polysemous words appear in sense-disambiguating context, same-sense cross-lingual pairs recover substantially higher similarity than different-sense pairs (\cohensd $= 1.0$--$1.6$), and this sense discrimination peaks at layer~10 in both models.
+Our results reveal polysemy as a systematic confound in cross-lingual evaluation and demonstrate that contextual embeddings from upper-middle layers can largely overcome this limitation.

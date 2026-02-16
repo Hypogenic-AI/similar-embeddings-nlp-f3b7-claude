@@ -1,0 +1,22 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Related Work}{}% 2
+\BOOKMARK [1][-]{section.3}{Methodology}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Models}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Datasets}{section.3}% 5
+\BOOKMARK [2][-]{subsection.3.3}{Embedding Extraction}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.4}{Experimental Protocol}{section.3}% 7
+\BOOKMARK [1][-]{section.4}{Results}{}% 8
+\BOOKMARK [2][-]{subsection.4.1}{Experiment 1: Translation Equivalents Have High Cross-Lingual Similarity}{section.4}% 9
+\BOOKMARK [2][-]{subsection.4.2}{Experiment 2: Polysemy Degrades Cross-Lingual Alignment}{section.4}% 10
+\BOOKMARK [2][-]{subsection.4.3}{Experiment 3: Context Recovers Sense-Level Alignment}{section.4}% 11
+\BOOKMARK [2][-]{subsection.4.4}{Experiment 4: Correlation with Human Judgments}{section.4}% 12
+\BOOKMARK [1][-]{section.5}{Discussion}{}% 13
+\BOOKMARK [2][-]{subsection.5.1}{Interpretation of Results}{section.5}% 14
+\BOOKMARK [2][-]{subsection.5.2}{Implications}{section.5}% 15
+\BOOKMARK [2][-]{subsection.5.3}{Limitations}{section.5}% 16
+\BOOKMARK [1][-]{section.6}{Conclusion}{}% 17
+\BOOKMARK [1][-]{appendix.A}{Additional Results}{}% 18
+\BOOKMARK [2][-]{subsection.A.1}{Experiment 1: Layer Analysis}{appendix.A}% 19
+\BOOKMARK [2][-]{subsection.A.2}{Experiment 3: Raw Similarity Without Centering}{appendix.A}% 20
+\BOOKMARK [2][-]{subsection.A.3}{Experiment 3: Similarity Across Layers}{appendix.A}% 21
+\BOOKMARK [2][-]{subsection.A.4}{Experiment 4: Visualization}{appendix.A}% 22

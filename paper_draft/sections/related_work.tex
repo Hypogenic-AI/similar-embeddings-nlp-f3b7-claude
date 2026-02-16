@@ -1,0 +1,37 @@
+\section{Related Work}
+\label{sec:related}
+
+\para{Cross-lingual word embeddings.}
+The observation that word embedding spaces across languages share approximate structural similarity dates to \citet{mikolov2013exploiting}, who showed that a simple linear mapping can align monolingual word embeddings across languages.
+Subsequent work developed both supervised~\citep{conneau2018word} and unsupervised alignment methods, surveyed comprehensively by \citet{ruder2019survey}.
+These approaches rely on the isomorphism assumption: that embedding spaces in different languages are approximately rotations of each other.
+Our work complements this line of research by measuring alignment quality as a function of polysemy, revealing a systematic source of noise in cross-lingual mappings.
+
+\para{Multilingual pretrained models.}
+Modern multilingual transformers learn cross-lingual representations through shared parameters and multilingual pretraining.
+\mbert~\citep{devlin2019bert} trains a single BERT model on 104 languages using Wikipedia, while \xlmr~\citep{conneau2020unsupervised} scales to 100 languages using CommonCrawl data.
+\citet{pires2019multilingual} showed that \mbert transfers across languages even without shared vocabulary, and \citet{wu2020emerging} demonstrated that cross-lingual structure emerges from parameter sharing alone.
+\citet{dufter2021first} further found that shared position embeddings and special tokens suffice for cross-lingual alignment.
+We build on these findings by directly measuring embedding similarity for translation equivalents and testing how polysemy modulates this alignment.
+
+\para{Language neutrality and centering.}
+\citet{libovicky2020language} showed that \mbert representations contain a strong language-specific component that can be removed by subtracting the per-language mean embedding (centering).
+This simple technique improves cross-lingual similarity and is essential for fair comparison.
+We adopt centering throughout our experiments and quantify its impact on both type-level and token-level similarity.
+
+\para{Polysemy in cross-lingual embeddings.}
+Polysemy poses a well-known challenge for cross-lingual alignment.
+\citet{zhang2019crosslingual} showed that polysemous words act as noise during supervised alignment of contextual embeddings and proposed filtering them during training.
+\citet{upadhyay2017beyond} introduced multi-sense multilingual embeddings, demonstrating that different languages can disambiguate senses that are conflated in any single translation pair.
+\citet{scarlini2020sensembert} created sense embeddings from BERT and extended them multilingually via BabelNet.
+Unlike these approaches, we do not propose a new method for handling polysemy; instead, we systematically quantify how polysemy affects cross-lingual similarity in existing models, providing evidence for the magnitude of the problem.
+
+\para{Word-in-context disambiguation.}
+The word-in-context (WiC) task~\citep{raganato2020xlwic} tests whether two occurrences of a word share the same sense.
+\citet{martelli2021semeval} extended this to a cross-lingual setting with the \mclwic dataset, which we use to evaluate sense-level cross-lingual alignment.
+Our use of this dataset differs from standard WiC evaluation: rather than training a classifier, we directly compare embedding similarities for same-sense and different-sense pairs, revealing how well the raw representation space captures sense distinctions across languages.
+
+\para{Layer-wise analysis of transformers.}
+\citet{tenney2019bert} showed that different BERT layers encode different types of linguistic information, with semantic features concentrated in upper layers.
+\citet{wu2020emerging} found that early layers are more similar across languages in multilingual models.
+We extend this analysis to cross-lingual sense discrimination, showing that layer~10 (out of 12) provides the best sense-discriminative alignment---consistent with the view that upper-middle layers encode the richest semantic information.

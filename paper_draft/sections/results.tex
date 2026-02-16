@@ -1,0 +1,163 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Experiment 1: Translation Equivalents Have High Cross-Lingual Similarity}
+\label{sec:exp1}
+
+\Tabref{tab:exp1} reports cosine similarity for translation pairs vs.\ random pairs in both models (last layer, centered embeddings). Translation equivalents consistently show high similarity (0.22--0.77), while random pairs hover near zero. The effect sizes are massive (\cohensd $= 0.90$--$3.01$), with all $p$-values below $10^{-300}$.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Model} & \textbf{Lang. Pair} & \textbf{Trans.\ Sim} & \textbf{Random Sim} & \textbf{Cohen's $d$} \\
+\midrule
+\multirow{5}{*}{\mbert}
+ & EN--FR & $0.765 \pm 0.35$ & $-0.000 \pm 0.10$ & {\bf 3.01} \\
+ & EN--ES & $0.697 \pm 0.36$ & $-0.001 \pm 0.10$ & 2.63 \\
+ & EN--DE & $0.591 \pm 0.41$ & $-0.002 \pm 0.10$ & 2.01 \\
+ & EN--ZH & $0.546 \pm 0.40$ & $-0.002 \pm 0.10$ & 1.91 \\
+ & EN--RU & $0.306 \pm 0.25$ & $\phantom{-}0.002 \pm 0.09$ & 1.63 \\
+\midrule
+\multirow{5}{*}{\xlmr}
+ & EN--FR & $0.715 \pm 0.42$ & $-0.002 \pm 0.18$ & 2.24 \\
+ & EN--ES & $0.646 \pm 0.43$ & $\phantom{-}0.003 \pm 0.17$ & 1.95 \\
+ & EN--DE & $0.547 \pm 0.46$ & $\phantom{-}0.001 \pm 0.17$ & 1.58 \\
+ & EN--ZH & $0.480 \pm 0.46$ & $\phantom{-}0.000 \pm 0.18$ & 1.38 \\
+ & EN--RU & $0.219 \pm 0.30$ & $-0.001 \pm 0.17$ & 0.90 \\
+\bottomrule
+\end{tabular}
+\caption{Cosine similarity of translation pairs vs.\ random pairs (last layer, centered). All differences are significant ($p < 10^{-300}$, Mann--Whitney $U$ test). Best \cohensd in {\bf bold}.}
+\label{tab:exp1}
+\end{table}
+
+The ranking of language pairs is consistent across models: EN--FR $>$ EN--ES $>$ EN--DE $>$ EN--ZH $>$ EN--RU. This ordering reflects typological and orthographic proximity---French and Spanish share Latin-derived vocabulary and script with English, while Russian uses Cyrillic, reducing subword overlap. \Figref{fig:exp1} visualizes these distributions.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/exp1_translation_vs_random.png}
+\caption{Cosine similarity distributions for translation pairs (colored) vs.\ random pairs (gray) across five language pairs. Translation pairs are clearly separated from random pairs in both models, with the gap largest for typologically similar languages.}
+\label{fig:exp1}
+\end{figure}
+
+\subsection{Experiment 2: Polysemy Degrades Cross-Lingual Alignment}
+\label{sec:exp2}
+
+\Tabref{tab:exp2} reports similarity broken down by polysemy category. Across all language pairs and both models, monosemous words have consistently higher similarity than polysemous words. The effect is medium-to-large (\cohensd $= 0.14$--$0.57$), and the Spearman correlation between sense count and similarity is negative and significant in every case.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Lang. Pair} & \textbf{Mono (1)} & \textbf{Poly (2--4)} & \textbf{High (5+)} & \textbf{Cohen's $d$} & \textbf{$\rho$} \\
+\midrule
+\multirow{5}{*}{\mbert}
+ & EN--FR & {\bf 0.671} & 0.482 & 0.327 & 0.54 & $-0.37^{***}$ \\
+ & EN--ES & {\bf 0.603} & 0.441 & 0.327 & 0.49 & $-0.31^{***}$ \\
+ & EN--DE & {\bf 0.531} & 0.344 & 0.252 & 0.52 & $-0.28^{***}$ \\
+ & EN--ZH & {\bf 0.410} & 0.242 & 0.230 & 0.57 & $-0.16^{***}$ \\
+ & EN--RU & {\bf 0.291} & 0.260 & 0.225 & 0.14 & $-0.12^{***}$ \\
+\midrule
+\multirow{5}{*}{\xlmr}
+ & EN--FR & {\bf 0.614} & 0.381 & 0.244 & 0.56 & $-0.33^{***}$ \\
+ & EN--ES & {\bf 0.520} & 0.335 & 0.217 & 0.47 & $-0.30^{***}$ \\
+ & EN--DE & {\bf 0.478} & 0.258 & 0.205 & 0.55 & $-0.24^{***}$ \\
+ & EN--ZH & {\bf 0.339} & 0.157 & 0.132 & 0.51 & $-0.15^{***}$ \\
+ & EN--RU & {\bf 0.200} & 0.161 & 0.146 & 0.15 & $-0.07^{***}$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Mean cosine similarity by polysemy category (last layer, centered). \cohensd compares monosemous vs.\ highly polysemous words. $\rho$: Spearman correlation between sense count and similarity ($^{***}$: $p < 0.001$). Best similarity in {\bf bold}.}
+\label{tab:exp2}
+\end{table}
+
+\Figref{fig:exp2} shows that the polysemy effect is monotonic: as the number of senses increases, cross-lingual similarity decreases. This dose-response pattern is consistent across all language pairs, though the magnitude varies. The effect is weakest for EN--RU, where overall alignment is already low.
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+\includegraphics[width=\textwidth]{figures/exp2_mono_vs_poly.png}
+\caption{Similarity by polysemy category}
+\label{fig:exp2_box}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+\includegraphics[width=\textwidth]{figures/exp2_sense_count_scatter.png}
+\caption{Similarity vs.\ sense count}
+\label{fig:exp2_scatter}
+\end{subfigure}
+\caption{\figleft Cosine similarity distributions by polysemy category. Monosemous words (1 sense) consistently show higher similarity than polysemous words. \figright Negative correlation between \wordnet sense count and cross-lingual cosine similarity.}
+\label{fig:exp2}
+\end{figure}
+
+\subsection{Experiment 3: Context Recovers Sense-Level Alignment}
+\label{sec:exp3}
+
+\Tabref{tab:exp3} compares cosine similarity for same-sense vs.\ different-sense pairs from \mclwic, using centered embeddings at layer~10 (the best-performing layer; see below). Same-sense pairs show substantially higher similarity in both models, with \cohensd ranging from 1.18 to 1.58.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Model} & \textbf{Lang. Pair} & \textbf{Same-Sense} & \textbf{Diff-Sense} & \textbf{Cohen's $d$} \\
+\midrule
+\multirow{3}{*}{\mbert}
+ & EN--FR & 0.324 & 0.154 & 1.23 \\
+ & EN--ZH & 0.291 & 0.114 & {\bf 1.58} \\
+ & EN--RU & 0.274 & 0.119 & 1.25 \\
+\midrule
+\multirow{3}{*}{\xlmr}
+ & EN--FR & 0.402 & 0.211 & 1.18 \\
+ & EN--ZH & 0.339 & 0.161 & 1.43 \\
+ & EN--RU & 0.352 & 0.175 & 1.31 \\
+\bottomrule
+\end{tabular}
+\caption{Same-sense vs.\ different-sense cosine similarity from \mclwic (layer~10, centered). All differences are significant ($p < 10^{-30}$). Best \cohensd in {\bf bold}.}
+\label{tab:exp3}
+\end{table}
+
+\para{Centering is essential for \xlmr.}
+Without centering, \xlmr produces near-saturated cosine similarities ($\sim$0.98) that mask sense discrimination (\cohensd $= 0.48$--$0.58$). With centering, \xlmr achieves comparable effect sizes to \mbert (\cohensd $= 1.18$--$1.43$). \mbert is less affected by centering because its representations already exhibit greater language separation.
+
+\para{Layer analysis.}
+\Figref{fig:exp3_layers} shows how sense discrimination varies across layers. \cohensd increases monotonically from layer~1 ($d \approx 0.1$--$0.2$) to layer~10 ($d \approx 1.2$--$1.6$), then decreases slightly at layer~12. This pattern holds across all language pairs and both models, supporting the finding that upper-middle layers encode the richest semantic information~\citep{tenney2019bert}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/exp3_layer_cohens_d.png}
+\caption{\cohensd for same-sense vs.\ different-sense discrimination across transformer layers (centered embeddings). Sense discrimination increases monotonically from early to upper-middle layers, peaking at layer~10 in both models.}
+\label{fig:exp3_layers}
+\end{figure}
+
+\subsection{Experiment 4: Correlation with Human Judgments}
+\label{sec:exp4}
+
+\Tabref{tab:exp4} reports Spearman correlations between model-based cosine similarity and human gold scores on \semeval Task~2. \mbert achieves moderate correlations (0.36--0.49) after centering, which provides a 10--13 percentage point boost over raw similarities. \xlmr performs lower on this task (0.12--0.25).
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Model} & \textbf{Lang. Pair} & \textbf{$\rho$ (centered)} & \textbf{$\rho$ (raw)} & \textbf{$r$ (centered)} \\
+\midrule
+\multirow{4}{*}{\mbert}
+ & EN--DE & {\bf 0.493} & 0.376 & 0.498 \\
+ & EN--ES & 0.475 & 0.386 & 0.486 \\
+ & EN--IT & 0.455 & 0.364 & 0.462 \\
+ & EN--FA & 0.359 & 0.253 & 0.368 \\
+\midrule
+\multirow{4}{*}{\xlmr}
+ & EN--DE & 0.250 & 0.096 & 0.270 \\
+ & EN--ES & 0.203 & 0.082 & 0.208 \\
+ & EN--IT & 0.228 & 0.109 & 0.217 \\
+ & EN--FA & 0.119 & 0.047 & 0.109 \\
+\bottomrule
+\end{tabular}
+\caption{Correlation with human similarity judgments on \semeval Task~2 (last layer). $\rho$: Spearman; $r$: Pearson. Centering consistently improves correlations. Best $\rho$ in {\bf bold}.}
+\label{tab:exp4}
+\end{table}

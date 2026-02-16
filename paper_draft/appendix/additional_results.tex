@@ -1,0 +1,66 @@
+\section{Additional Results}
+\label{sec:appendix}
+
+\subsection{Experiment 1: Layer Analysis}
+
+\Figref{fig:exp1_layers} shows how translation pair similarity varies across layers.
+In both models, similarity generally increases from early to later layers, with the last layer providing the highest type-level alignment.
+This contrasts with the sense-discrimination analysis in Experiment~3, where layer~10 outperforms layer~12, suggesting that the last layer optimizes for token prediction rather than sense-level semantics.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/exp1_layer_analysis.png}
+\caption{Translation pair cosine similarity across layers for both models. Similarity generally increases with layer depth, with the last layer providing the highest type-level alignment.}
+\label{fig:exp1_layers}
+\end{figure}
+
+\subsection{Experiment 3: Raw Similarity Without Centering}
+
+\Tabref{tab:exp3_raw} reports \mclwic results without centering.
+\mbert shows moderate discrimination (\cohensd $= 1.02$--$1.51$), while \xlmr produces near-saturated similarities ($\sim$0.98) with much weaker discrimination (\cohensd $= 0.48$--$0.58$).
+This highlights the importance of centering, especially for \xlmr.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Lang. Pair} & \textbf{Same-Sense} & \textbf{Diff-Sense} & \textbf{Cohen's $d$} & \textbf{Acc.} \\
+\midrule
+\multirow{3}{*}{\mbert}
+ & EN--FR & 0.444 & 0.342 & 1.02 & 0.719 \\
+ & EN--ZH & 0.416 & 0.303 & 1.51 & 0.786 \\
+ & EN--RU & 0.421 & 0.327 & 1.18 & 0.712 \\
+\midrule
+\multirow{3}{*}{\xlmr}
+ & EN--FR & 0.986 & 0.984 & 0.48 & 0.564 \\
+ & EN--ZH & 0.983 & 0.979 & 0.58 & 0.604 \\
+ & EN--RU & 0.986 & 0.983 & 0.52 & 0.565 \\
+\bottomrule
+\end{tabular}
+\caption{Same-sense vs.\ different-sense similarity \emph{without centering} (last layer). \xlmr produces near-saturated similarities that mask meaningful sense discrimination.}
+\label{tab:exp3_raw}
+\end{table}
+
+\subsection{Experiment 3: Similarity Across Layers}
+
+\Figref{fig:exp3_sim} shows the raw cosine similarity values for same-sense and different-sense pairs across layers.
+The gap between the two conditions widens progressively from early to upper-middle layers.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/exp3_layer_similarity.png}
+\caption{Same-sense and different-sense cosine similarity across layers (centered). The gap between conditions widens from early to upper-middle layers, with both converging slightly at the last layer.}
+\label{fig:exp3_sim}
+\end{figure}
+
+\subsection{Experiment 4: Visualization}
+
+\Figref{fig:exp4_vis} visualizes the Spearman correlations from Experiment~4. \mbert consistently outperforms \xlmr on type-level cross-lingual word similarity, and centering improves both models.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/exp4_semeval_correlations.png}
+\caption{Spearman correlations with human similarity judgments on \semeval Task~2. \mbert achieves higher correlations than \xlmr, and centering provides a consistent boost for both models.}
+\label{fig:exp4_vis}
+\end{figure}

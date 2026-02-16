@@ -1,0 +1,135 @@
+\begin{thebibliography}{17}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Camacho-Collados et~al.(2017)Camacho-Collados, Pilehvar, Collier, and
+  Navigli]{camacho2017semeval}
+Jose Camacho-Collados, Mohammad~Taher Pilehvar, Nigel Collier, and Roberto
+  Navigli.
+\newblock {SemEval}-2017 task 2: Multilingual and cross-lingual semantic word
+  similarity.
+\newblock In \emph{Proceedings of the 11th International Workshop on Semantic
+  Evaluation (SemEval-2017)}, pages 15--26, 2017.
+
+\bibitem[Conneau et~al.(2018)Conneau, Lample, Ranzato, Denoyer, and
+  J{\'e}gou]{conneau2018word}
+Alexis Conneau, Guillaume Lample, Marc'Aurelio Ranzato, Ludovic Denoyer, and
+  Herv{\'e} J{\'e}gou.
+\newblock Word translation without parallel data.
+\newblock In \emph{Proceedings of the 6th International Conference on Learning
+  Representations}, 2018.
+
+\bibitem[Conneau et~al.(2020)Conneau, Khandelwal, Goyal, Chaudhary, Wenzek,
+  Guzm{\'a}n, Grave, Ott, Zettlemoyer, and Stoyanov]{conneau2020unsupervised}
+Alexis Conneau, Kartikay Khandelwal, Naman Goyal, Vishrav Chaudhary, Guillaume
+  Wenzek, Francisco Guzm{\'a}n, Edouard Grave, Myle Ott, Luke Zettlemoyer, and
+  Veselin Stoyanov.
+\newblock Unsupervised cross-lingual representation learning at scale.
+\newblock In \emph{Proceedings of the 58th Annual Meeting of the Association
+  for Computational Linguistics}, pages 8440--8451, 2020.
+
+\bibitem[Devlin et~al.(2019)Devlin, Chang, Lee, and Toutanova]{devlin2019bert}
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova.
+\newblock {BERT}: Pre-training of deep bidirectional transformers for language
+  understanding.
+\newblock In \emph{Proceedings of the 2019 Conference of the North American
+  Chapter of the Association for Computational Linguistics}, pages 4171--4186,
+  2019.
+
+\bibitem[Dufter and Sch{\"u}tze(2021)]{dufter2021first}
+Philipp Dufter and Hinrich Sch{\"u}tze.
+\newblock First align, then predict: Understanding the cross-lingual ability of
+  multilingual {BERT}.
+\newblock In \emph{Proceedings of the 16th Conference of the European Chapter
+  of the Association for Computational Linguistics}, pages 2214--2231, 2021.
+
+\bibitem[Libovick{\'y} et~al.(2020)Libovick{\'y}, Rosa, and
+  Fraser]{libovicky2020language}
+Jind{\v{r}}ich Libovick{\'y}, Rudolf Rosa, and Alexander Fraser.
+\newblock On the language neutrality of pre-trained multilingual
+  representations.
+\newblock In \emph{Findings of the Association for Computational Linguistics:
+  EMNLP 2020}, pages 1663--1674, 2020.
+
+\bibitem[Martelli et~al.(2021)Martelli, Kalach, Tola, and
+  Navigli]{martelli2021semeval}
+Federico Martelli, Najla Kalach, Gabriele Tola, and Roberto Navigli.
+\newblock {SemEval}-2021 task 2: Multilingual and cross-lingual word-in-context
+  disambiguation ({MCL-WiC}).
+\newblock In \emph{Proceedings of the 15th International Workshop on Semantic
+  Evaluation (SemEval-2021)}, pages 24--36, 2021.
+
+\bibitem[Mikolov et~al.(2013)Mikolov, Le, and Sutskever]{mikolov2013exploiting}
+Tomas Mikolov, Quoc~V. Le, and Ilya Sutskever.
+\newblock Exploiting similarities among languages for machine translation.
+\newblock \emph{arXiv preprint arXiv:1309.4168}, 2013.
+
+\bibitem[Miller(1995)]{miller1995wordnet}
+George~A. Miller.
+\newblock {WordNet}: A lexical database for {English}.
+\newblock \emph{Communications of the ACM}, 38\penalty0 (11):\penalty0 39--41,
+  1995.
+
+\bibitem[Pires et~al.(2019)Pires, Schlinger, and
+  Garrette]{pires2019multilingual}
+Telmo Pires, Eva Schlinger, and Dan Garrette.
+\newblock How multilingual is multilingual {BERT}?
+\newblock In \emph{Proceedings of the 57th Annual Meeting of the Association
+  for Computational Linguistics}, pages 4996--5001, 2019.
+
+\bibitem[Raganato et~al.(2020)Raganato, Pasini, Camacho-Collados, and
+  Pilehvar]{raganato2020xlwic}
+Alessandro Raganato, Tommaso Pasini, Jose Camacho-Collados, and Mohammad~Taher
+  Pilehvar.
+\newblock {XL-WiC}: A multilingual benchmark for evaluating semantic
+  contextualization.
+\newblock In \emph{Proceedings of the 2020 Conference on Empirical Methods in
+  Natural Language Processing}, pages 7193--7206, 2020.
+
+\bibitem[Ruder et~al.(2019)Ruder, Vuli{\'c}, and S{\o}gaard]{ruder2019survey}
+Sebastian Ruder, Ivan Vuli{\'c}, and Anders S{\o}gaard.
+\newblock A survey of cross-lingual word embedding models.
+\newblock \emph{Journal of Artificial Intelligence Research}, 65:\penalty0
+  569--631, 2019.
+
+\bibitem[Scarlini et~al.(2020)Scarlini, Pasini, and
+  Navigli]{scarlini2020sensembert}
+Bianca Scarlini, Tommaso Pasini, and Roberto Navigli.
+\newblock {SensEmBERT}: Context-enhanced sense embeddings for multilingual word
+  sense disambiguation.
+\newblock In \emph{Proceedings of the AAAI Conference on Artificial
+  Intelligence}, volume~34, pages 8758--8765, 2020.
+
+\bibitem[Tenney et~al.(2019)Tenney, Das, and Pavlick]{tenney2019bert}
+Ian Tenney, Dipanjan Das, and Ellie Pavlick.
+\newblock {BERT} rediscovers the classical {NLP} pipeline.
+\newblock In \emph{Proceedings of the 57th Annual Meeting of the Association
+  for Computational Linguistics}, pages 4593--4601, 2019.
+
+\bibitem[Upadhyay et~al.(2017)Upadhyay, Chang, Taddy, Kalai, and
+  Zou]{upadhyay2017beyond}
+Shyam Upadhyay, Kai-Wei Chang, Matt Taddy, Adam Kalai, and James Zou.
+\newblock Beyond bilingual: Multi-sense word embeddings using multilingual
+  context.
+\newblock In \emph{Proceedings of the 2nd Workshop on Representation Learning
+  for NLP}, pages 101--110, 2017.
+
+\bibitem[Wu et~al.(2020)Wu, Conneau, Li, Zettlemoyer, and
+  Stoyanov]{wu2020emerging}
+Shijie Wu, Alexis Conneau, Haoran Li, Luke Zettlemoyer, and Veselin Stoyanov.
+\newblock Emerging cross-lingual structure in pretrained language models.
+\newblock In \emph{Proceedings of the 58th Annual Meeting of the Association
+  for Computational Linguistics}, pages 6022--6034, 2020.
+
+\bibitem[Zhang et~al.(2019)Zhang, Yin, Zhu, and
+  Zweigenbaum]{zhang2019crosslingual}
+Mingsi Zhang, Yinglu Yin, Xiaodan Zhu, and Pierre Zweigenbaum.
+\newblock Cross-lingual contextual word embeddings mapping with multi-sense
+  words in mind.
+\newblock In \emph{Proceedings of the 2019 Conference on Empirical Methods in
+  Natural Language Processing}, pages 3554--3564, 2019.
+
+\end{thebibliography}

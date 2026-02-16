@@ -1,0 +1,59 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation of Results}
+
+\para{Why does polysemy degrade alignment?}
+When a multilingual model represents a polysemous word like ``bank'' (18 \wordnet senses) as a single type-level embedding, it must distribute representational capacity across all senses.
+The French translation ``banque'' concentrates on just one or two senses.
+The resulting embeddings overlap only partially, reducing cosine similarity.
+This effect scales with the number of senses: words with 5+ senses show 20--70\% lower similarity than monosemous words.
+
+\para{Why does context help?}
+Contextual embeddings resolve the polysemy problem by specializing to the relevant sense.
+When ``bank'' appears in ``I deposited money at the bank,'' its contextualized representation shifts toward the financial sense, better matching ``banque'' in a corresponding French context.
+Our Experiment~3 results (\cohensd $= 1.0$--$1.6$) confirm that this mechanism works cross-lingually.
+
+\para{Why does \mbert outperform \xlmr on type-level similarity?}
+This finding is initially surprising, since \xlmr consistently outperforms \mbert on downstream tasks~\citep{conneau2020unsupervised}.
+We hypothesize that \xlmr's larger vocabulary (250K vs.\ 110K tokens) and training on noisier CommonCrawl data (vs.\ \mbert's Wikipedia) produce more distributed representations.
+These representations are powerful for contextual tasks but yield weaker signal when queried with isolated words.
+Supporting this interpretation, the gap between models narrows substantially in the contextualized setting (Experiment~3), where \xlmr achieves comparable sense discrimination after centering.
+
+\para{The importance of centering.}
+Centering provides a 10--13 percentage point boost in Spearman correlations on \semeval (\tabref{tab:exp4}) and is essential for \xlmr in the \mclwic setting, where uncorrected similarities saturate near 0.98.
+This confirms that language-specific components dominate raw cosine similarity in multilingual models~\citep{libovicky2020language}, and any cross-lingual similarity measurement should control for this bias.
+
+\subsection{Implications}
+
+\para{For practitioners.}
+Applications that rely on cross-lingual word-level similarity---bilingual dictionary induction, cross-lingual information retrieval, word-level translation quality estimation---should account for polysemy.
+Using contextualized embeddings from layer~10 rather than the last layer or type-level embeddings provides better sense-discriminative alignment.
+
+\para{For evaluation.}
+Polysemy is a systematic confound in cross-lingual evaluation benchmarks.
+When comparing models on bilingual lexicon induction or cross-lingual word similarity, controlling for polysemy level would provide a more nuanced picture of model quality.
+Our results suggest that performance differences between models may partly reflect differences in how they handle polysemous words.
+
+\para{For model development.}
+The consistent negative correlation between sense count and cross-lingual similarity suggests room for improvement.
+Sense-aware training objectives, such as those incorporating word sense disambiguation during pretraining, could strengthen cross-lingual alignment for polysemous words.
+
+\subsection{Limitations}
+
+\para{WordNet coverage.}
+Our polysemy classification relies on English \wordnet, which may not perfectly reflect a word's semantic complexity.
+Some words with one synset may have multiple pragmatic uses, while \wordnet's fine-grained sense distinctions may overcount senses for others.
+Additionally, polysemy is classified only on the English side; the target-language word may itself be polysemous in ways we do not measure.
+
+\para{Type-level embeddings from contextual models.}
+Feeding isolated words to models designed for sentences may produce suboptimal representations.
+While this is standard practice~\citep{wu2020emerging, libovicky2020language}, the models were never trained on isolated word inputs, and the resulting embeddings may not represent the models' full capabilities.
+
+\para{Language pair selection.}
+We test only English-centric pairs.
+Non-English pairs (\eg FR--DE, ZH--RU) may show different patterns, especially for polysemy effects that depend on sense overlap between the specific languages involved.
+
+\para{Model selection.}
+We test only base-sized models (178M and 278M parameters).
+Larger models such as \texttt{xlm-roberta-large} (550M parameters) may show different polysemy effects, potentially with stronger alignment that is more robust to sense ambiguity.

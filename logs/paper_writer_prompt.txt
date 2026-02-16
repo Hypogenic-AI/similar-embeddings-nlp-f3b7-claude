@@ -1,0 +1,981 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at templates/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. USE COMMAND TEMPLATES: Copy templates/paper_writing/commands/ to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Report: Do Words with Similar Meanings in Different Languages Have Similar Embeddings?
+
+## 1. Executive Summary
+
+**Research question**: Do words with similar meanings in different languages have similar embeddings in multilingual transformer models, and how does polysemy (multiple word senses) affect this similarity?
+
+**Key finding**: Translation equivalents have dramatically higher cosine similarity than random word pairs in both mBERT and XLM-R (Cohen&#39;s d = 0.90–3.01), confirming that meaning alignment emerges in multilingual models. Critically, polysemy significantly degrades this similarity: monosemous translation pairs have 20–70% higher similarity than highly polysemous ones (d = 0.14–0.57), with a consistent negative correlation between sense count and cross-lingual similarity (Spearman ρ = −0.07 to −0.37). However, when words are presented in sense-disambiguating context, same-sense pairs recover significantly higher similarity than different-sense pairs (d = 1.0–1.6), demonstrating that contextual information partially overcomes the polysemy problem.
+
+**Practical implications**: Multilingual models align translation equivalents in embedding space, but this alignment is systematically weakened for polysemous words. Applications relying on cross-lingual word-level similarity (e.g., bilingual dictionary induction, cross-lingual retrieval) should account for polysemy. Contextual embeddings from middle-to-upper layers (7–10) provide the best sense discrimination.
+
+---
+
+## 2. Goal
+
+### Hypothesis
+Words with similar meanings in different languages will have similar embeddings in multilingual models. If words have multiple meanings, and only one meaning is similar across languages, the embeddings may still be similar, but this similarity will be reduced compared to monosemous words.
+
+### Sub-hypotheses
+- **H1**: Translation equivalents have significantly higher cosine similarity than random word pairs.
+- **H2**: Monosemous translation pairs have higher cross-lingual similarity than polysemous translation pairs.
+- **H3**: In context, same-sense cross-lingual word pairs have higher similarity than different-sense pairs.
+- **H4**: The polysemy effect varies across model layers, with middle-to-upper layers showing the best cross-lingual sense alignment.
+
+### Why This Matters
+Multilingual models underpin applications serving billions of users across 100+ languages—machine translation, cross-lingual search, multilingual question answering. Understanding whether and how polysemy affects cross-lingual embedding alignment reveals both a strength (meaning-aligned representations emerge without explicit supervision) and a systematic weakness (polysemy degrades alignment) of these models. This has direct implications for bilingual lexicon induction, cross-lingual transfer learning, and word sense disambiguation.
+
+### Gap in Existing Work
+Prior work established that multilingual models create cross-lingual representations (Wu &amp; Conneau, 2020; Pires et al., 2019) and that polysemy hurts static embedding alignment (Zhang et al., 2019). However, no systematic study has measured how sense count affects cross-lingual embedding similarity in modern contextual models across multiple language pairs, nor compared type-level vs. token-level (contextualized) similarity for polysemous words.
+
+---
+
+## 3. Data Construction
+
+### Datasets Used
+
+| Dataset | Source | Size | Task | Languages |
+|---------|--------|------|------|-----------|
+| MUSE Bilingual Dictionaries | Facebook Research | 420K word pairs | Translation pair similarity | EN-FR, EN-DE, EN-ES, EN-RU, EN-ZH |
+| SemEval-2017 Task 2 | SemEval | 500 pairs × 10 cross-lingual sets | Graded word similarity | EN-DE, EN-ES, EN-IT, EN-FA |
+| MCL-WiC | SapienzaNLP / SemEval-2021 | 1000 examples × 3 cross-lingual pairs | Word-in-context disambiguation | EN-FR, EN-ZH, EN-RU |
+
+### Data Quality
+- **MUSE dictionaries**: Filtered to single-word, alphabetic entries only; removed duplicates. 5,000 pairs sampled per language pair.
+- **SemEval-2017**: Manually curated benchmark with inter-annotator agreement ~0.9. 914–978 pairs per language pair after filtering.
+- **MCL-WiC**: Manually annotated; balanced 500 same-sense (T) and 500 different-sense (F) per language pair.
+
+### Polysemy Classification
+English words classified using WordNet synset counts:
+- **Monosemous**: 1 synset (767–1010 words per language pair)
+- **Polysemous**: 2–4 synsets (954–1347 words per language pair)
+- **Highly polysemous**: 5+ synsets (617–1001 words per language pair)
+
+### Example Samples
+
+**MUSE translation pairs**:
+| English | French | WordNet Senses | Category |
+|---------|--------|----------------|----------|
+| cathedral | cathédrale | 1 | Monosemous |
+| bank | banque | 18 | Highly polysemous |
+| table | table | 6 | Highly polysemous |
+
+**MCL-WiC examples**:
+- Same sense (T): &#34;gently&#34; in &#34;treated more gently&#34; (EN) ↔ &#34;augmenté modérément&#34; (FR, meaning &#34;moderately&#34;)
+- Different sense (F): &#34;play&#34; in &#34;holds a key play&#34; (role) vs. &#34;a musical play&#34; (theater)
+
+### Preprocessing Steps
+1. Mean-pooling of subword token embeddings (excluding [CLS]/[SEP] special tokens)
+2. Language-specific centering (Libovický et al., 2020): subtract per-language embedding mean to remove language identity bias
+3. Cosine similarity computed on centered embeddings
+
+---
+
+## 4. Experiment Description
+
+### Methodology
+
+#### High-Level Approach
+We extract embeddings from two multilingual transformer models for translation pairs across 5 language pairs, classify English words by polysemy level using WordNet, and measure how polysemy affects cross-lingual embedding similarity. We complement this type-level analysis with token-level (contextualized) analysis using the MCL-WiC word-in-context dataset.
+
+#### Why This Method?
+- **Two models** (mBERT, XLM-R): Tests generalizability across architectures
+- **Five language pairs**: Covers typologically diverse languages (Romance: FR, ES; Germanic: DE; Slavic: RU; Sino-Tibetan: ZH)
+- **Type + token level**: Isolates whether polysemy effects are inherent to word representations or can be resolved by context
+- **Centering**: Controls for the known language-identity bias in multilingual models (Libovický et al., 2020)
+
+### Implementation Details
+
+#### Tools and Libraries
+| Library | Version | Purpose |
+|---------|---------|---------|
+| PyTorch | 2.10.0+cu128 | Deep learning framework |
+| Transformers | 5.1.0 | Model loading &amp; inference |
+| NLTK | — | WordNet sense counts |
+| SciPy | 1.17.0 | Statistical tests |
+| NumPy | — | Numerical computation |
+| Matplotlib + Seaborn | — | Visualization |
+
+#### Models
+| Model | Parameters | Languages | Architecture |
+|-------|-----------|-----------|-------------|
+| `bert-base-multilingual-cased` (mBERT) | 178M | 104 languages | 12-layer Transformer encoder |
+| `xlm-roberta-base` (XLM-R) | 278M | 100 languages | 12-layer Transformer encoder |
+
+#### Hardware
+- 2× NVIDIA GeForce RTX 3090 (24GB VRAM each)
+- Mixed precision inference (FP16)
+- Batch size: 128 (type-level), 32 (contextualized)
+
+#### Hyperparameters
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| Random seed | 42 | Reproducibility |
+| Max pairs per lang | 5,000 | Sufficient for robust statistics |
+| Batch size (words) | 128 | Fits in GPU memory |
+| Batch size (sentences) | 32 | Longer sequences need more memory |
+| Max sequence length | 256 | Accommodates MCL-WiC sentences |
+| Layers tested | 0, 1, 3, 4, 6, 7, 9, 10, 12 (last) | Span full model depth |
+
+### Experimental Protocol
+
+#### Experiment 1: Translation Pair Similarity
+For each of 5 language pairs:
+1. Load 5,000 MUSE translation pairs
+2. Extract mean-pooled subword embeddings at 5 layers
+3. Center embeddings per language
+4. Compute cosine similarity for translation pairs
+5. Compute cosine similarity for shuffled (random) pairs as control
+6. Mann-Whitney U test (translation &gt; random)
+
+#### Experiment 2: Monosemous vs. Polysemous
+For each language pair:
+1. Classify English words by WordNet sense count
+2. Extract and center embeddings (last layer)
+3. Compare similarity distributions across polysemy categories
+4. Mann-Whitney U test (monosemous &gt; polysemous)
+5. Spearman correlation: sense count vs. similarity
+
+#### Experiment 3: Contextualized Sense-Level Similarity
+For each MCL-WiC cross-lingual pair (EN-FR, EN-ZH, EN-RU):
+1. Extract contextualized embeddings for target words in sentence context
+2. Center per language group
+3. Compare same-sense (T) vs. different-sense (F) similarity
+4. Analyze across layers 1, 4, 7, 10, 12
+
+#### Experiment 4: SemEval-2017 Cross-Lingual Similarity
+For each cross-lingual pair:
+1. Extract word embeddings (last layer, centered)
+2. Compute cosine similarity
+3. Correlate with human gold scores (Spearman, Pearson)
+
+### Reproducibility Information
+- **Random seed**: 42 (NumPy, PyTorch, Python random)
+- **Hardware**: 2× RTX 3090
+- **Execution time**: ~3.5 minutes total (both models, all experiments)
+- **All results saved**: `results/all_results.json`, `results/exp3_layer_analysis.json`
+
+---
+
+## 5. Result Analysis
+
+### Experiment 1: Translation Equivalents Have Dramatically Higher Similarity
+
+**Finding**: Translation pairs have cosine similarity 0.22–0.76 (centered), while random pairs hover near 0.00. This difference is massive (Cohen&#39;s d = 0.90–3.01).
+
+#### mBERT (Last Layer, Centered)
+
+| Language Pair | Translation Sim | Random Sim | Cohen&#39;s d | p-value |
+|---------------|----------------|------------|-----------|---------|
+| EN-FR | 0.765 ± 0.346 | −0.000 ± 0.099 | 3.007 | &lt; 10⁻³⁰⁰ |
+| EN-ES | 0.697 ± 0.362 | −0.001 ± 0.099 | 2.632 | &lt; 10⁻³⁰⁰ |
+| EN-DE | 0.591 ± 0.407 | −0.002 ± 0.095 | 2.006 | &lt; 10⁻³⁰⁰ |
+| EN-ZH | 0.546 ± 0.395 | −0.002 ± 0.097 | 1.906 | &lt; 10⁻³⁰⁰ |
+| EN-RU | 0.306 ± 0.249 | 0.002 ± 0.090 | 1.625 | &lt; 10⁻³⁰⁰ |
+
+#### XLM-R (Last Layer, Centered)
+
+| Language Pair | Translation Sim | Random Sim | Cohen&#39;s d | p-value |
+|---------------|----------------|------------|-----------|---------|
+| EN-FR | 0.715 ± 0.419 | −0.002 ± 0.175 | 2.235 | &lt; 10⁻³⁰⁰ |
+| EN-ES | 0.646 ± 0.433 | 0.003 ± 0.174 | 1.949 | &lt; 10⁻³⁰⁰ |
+| EN-DE | 0.547 ± 0.459 | 0.001 ± 0.170 | 1.579 | &lt; 10⁻³⁰⁰ |
+| EN-ZH | 0.480 ± 0.457 | 0.000 ± 0.180 | 1.382 | &lt; 10⁻³⁰⁰ |
+| EN-RU | 0.219 ± 0.301 | −0.001 ± 0.169 | 0.898 | &lt; 10⁻³⁰⁰ |
+
+**Interpretation**: **H1 is strongly supported.** Translation equivalents occupy systematically similar regions of embedding space. The effect is largest for typologically similar languages (EN-FR, EN-ES) and smallest for distant ones (EN-RU), consistent with prior work (Pires et al., 2019). French and Spanish share Latin-derived vocabulary with English, providing both subword overlap and structural similarity. Russian uses a different script (Cyrillic), reducing subword overlap.
+
+![Translation vs Random Pairs](results/plots/exp1_translation_vs_random.png)
+
+### Experiment 2: Polysemy Significantly Degrades Cross-Lingual Similarity
+
+**Finding**: Monosemous words consistently have higher cross-lingual similarity than polysemous words. The effect is medium-to-large (Cohen&#39;s d = 0.14–0.57) and the correlation between sense count and similarity is negative and significant across all language pairs.
+
+#### mBERT (Last Layer, Centered)
+
+| Language Pair | Monosemous Sim | Polysemous (2-4) Sim | Highly Poly (5+) Sim | Cohen&#39;s d | Spearman ρ |
+|---------------|---------------|---------------------|---------------------|-----------|-----------|
+| EN-FR | 0.671 | 0.482 | 0.327 | 0.538 | −0.368*** |
+| EN-ZH | 0.410 | 0.242 | 0.230 | 0.571 | −0.160*** |
+| EN-DE | 0.531 | 0.344 | 0.252 | 0.521 | −0.277*** |
+| EN-ES | 0.603 | 0.441 | 0.327 | 0.486 | −0.314*** |
+| EN-RU | 0.291 | 0.260 | 0.225 | 0.142 | −0.115*** |
+
+(*** = p &lt; 0.001)
+
+#### XLM-R (Last Layer, Centered)
+
+| Language Pair | Monosemous Sim | Polysemous (2-4) Sim | Highly Poly (5+) Sim | Cohen&#39;s d | Spearman ρ |
+|---------------|---------------|---------------------|---------------------|-----------|-----------|
+| EN-FR | 0.614 | 0.381 | 0.244 | 0.561 | −0.333*** |
+| EN-ZH | 0.339 | 0.157 | 0.132 | 0.509 | −0.147*** |
+| EN-DE | 0.478 | 0.258 | 0.205 | 0.547 | −0.244*** |
+| EN-ES | 0.520 | 0.335 | 0.217 | 0.469 | −0.295*** |
+| EN-RU | 0.200 | 0.161 | 0.146 | 0.147 | −0.073*** |
+
+**Interpretation**: **H2 is strongly supported.** Polysemy acts as noise in cross-lingual alignment—when an English word like &#34;bank&#34; (18 senses) is mapped to a single foreign-language translation, the English embedding must represent all 18 senses while the foreign word may only capture 1-2, reducing their overlap. The effect is weaker for EN-RU, likely because the overall alignment is already low for this pair. The negative Spearman correlation confirms a dose-response relationship: more senses → lower similarity.
+
+![Monosemous vs Polysemous](results/plots/exp2_mono_vs_poly.png)
+
+![Similarity by Sense Count](results/plots/exp2_sense_count_scatter.png)
+
+### Experiment 3: Context Recovers Sense-Level Cross-Lingual Alignment
+
+**Finding**: When words are presented in context (MCL-WiC), same-sense cross-lingual pairs have significantly higher cosine similarity than different-sense pairs. The effect is large (Cohen&#39;s d = 1.0–1.6 in mBERT, 1.0–1.4 in XLM-R with centering).
+
+#### Without Centering (Last Layer)
+
+| Model | Language Pair | Same-Sense Sim | Diff-Sense Sim | Cohen&#39;s d | Accuracy |
+|-------|---------------|---------------|----------------|-----------|----------|
+| mBERT | EN-FR | 0.444 | 0.342 | 1.018 | 0.719 |
+| mBERT | EN-ZH | 0.416 | 0.303 | 1.506 | 0.786 |
+| mBERT | EN-RU | 0.421 | 0.327 | 1.175 | 0.712 |
+| XLM-R | EN-FR | 0.986 | 0.984 | 0.483 | 0.564 |
+| XLM-R | EN-ZH | 0.983 | 0.979 | 0.579 | 0.604 |
+| XLM-R | EN-RU | 0.986 | 0.983 | 0.515 | 0.565 |
+
+Note: XLM-R without centering produces near-saturated similarities (~0.98), masking discrimination. Centering resolves this.
+
+#### With Centering (Best Layer = 10)
+
+| Model | Language Pair | Same-Sense Sim | Diff-Sense Sim | Cohen&#39;s d |
+|-------|---------------|---------------|----------------|-----------|
+| mBERT | EN-FR | 0.324 | 0.154 | 1.225 |
+| mBERT | EN-ZH | 0.291 | 0.114 | 1.578 |
+| mBERT | EN-RU | 0.274 | 0.119 | 1.248 |
+| XLM-R | EN-FR | 0.402 | 0.211 | 1.180 |
+| XLM-R | EN-ZH | 0.339 | 0.161 | 1.425 |
+| XLM-R | EN-RU | 0.352 | 0.175 | 1.306 |
+
+**Interpretation**: **H3 is strongly supported.** Contextual information enables multilingual models to create sense-specific representations that align much better cross-lingually when the senses match. This is precisely the mechanism that can overcome the polysemy problem identified in Experiment 2: while type-level embeddings of polysemous words are blurred across senses, contextualized embeddings can focus on the relevant sense, restoring cross-lingual alignment.
+
+![Same vs Different Sense](results/plots/exp3_same_vs_diff_sense.png)
+
+#### Layer Analysis
+
+**Finding**: Sense discrimination (Cohen&#39;s d) increases monotonically from early to upper-middle layers, peaking at layer 10 in both models. This aligns with the BERTology finding that middle-to-upper layers encode more semantic information.
+
+![Sense Discrimination Across Layers](results/plots/exp3_layer_cohens_d.png)
+
+**Interpretation**: **H4 is supported.** Layer 10 provides the best sense-discriminative cross-lingual alignment, while layer 1 shows minimal discrimination (d ≈ 0.1–0.2). This suggests that lower layers capture primarily surface features (subword identity, position), while upper layers encode semantic content that enables cross-lingual sense alignment.
+
+### Experiment 4: Cross-Lingual Word Similarity Correlations
+
+**Finding**: mBERT achieves moderate Spearman correlations (0.36–0.49) with human similarity judgments on SemEval-2017 Task 2, while XLM-R performs lower (0.12–0.25). Centering substantially improves correlations for both models.
+
+| Model | Language Pair | Spearman (centered) | Spearman (raw) | Pearson (centered) |
+|-------|---------------|--------------------|-----------------|--------------------|
+| mBERT | EN-DE | 0.493 | 0.376 | 0.498 |
+| mBERT | EN-ES | 0.475 | 0.386 | 0.486 |
+| mBERT | EN-IT | 0.455 | 0.364 | 0.462 |
+| mBERT | EN-FA | 0.359 | 0.253 | 0.368 |
+| XLM-R | EN-DE | 0.250 | 0.096 | 0.270 |
+| XLM-R | EN-ES | 0.203 | 0.082 | 0.208 |
+| XLM-R | EN-IT | 0.228 | 0.109 | 0.217 |
+| XLM-R | EN-FA | 0.119 | 0.047 | 0.109 |
+
+![SemEval Correlations](results/plots/exp4_semeval_correlations.png)
+
+**Interpretation**: mBERT&#39;s type-level embeddings capture graded semantic similarity moderately well, with centering providing a 10–13 percentage point boost. XLM-R&#39;s lower performance on this task is surprising and may reflect its training on noisier CommonCrawl data (vs. mBERT&#39;s Wikipedia training), or its larger embedding space requiring more sophisticated similarity measures. The SemEval task uses single words (type-level), where mBERT may benefit from its smaller, more focused vocabulary.
+
+### Surprises and Insights
+
+1. **mBERT outperforms XLM-R on type-level similarity tasks** (SemEval-2017), despite XLM-R being the stronger model on downstream tasks. This suggests that XLM-R&#39;s representations are more distributed and context-dependent, making isolated word similarity a weaker signal.
+
+2. **Centering is crucial**, especially for XLM-R. Without centering, XLM-R&#39;s contextualized embeddings show near-saturated similarities (~0.98) that mask meaningful sense discrimination. With centering, both models show comparable effect sizes.
+
+3. **The polysemy effect is remarkably consistent** across language pairs and models: more senses → lower similarity, with the only exception being EN-RU where overall similarity is already low.
+
+4. **EN-RU consistently shows weaker effects**, likely due to Cyrillic script (no subword overlap) and greater typological distance, resulting in lower baseline alignment that leaves less room for polysemy to degrade.
+
+---
+
+## 6. Conclusions
+
+### Summary
+Words with similar meanings in different languages do have significantly similar embeddings in multilingual transformer models — translation equivalents show cosine similarity of 0.22–0.77 (after centering), far above the ~0.00 baseline for random pairs. However, polysemy systematically weakens this alignment: monosemous words show 15–65% higher cross-lingual similarity than highly polysemous words. Crucially, when polysemous words are presented in sense-disambiguating context, the model&#39;s contextualized representations recover strong cross-lingual alignment for matched senses, with Cohen&#39;s d reaching 1.2–1.6 between same-sense and different-sense pairs.
+
+### Answer to the Research Question
+**Yes**, words with similar meanings in different languages have similar embeddings. And to the follow-up question about polysemy: **when a word has multiple meanings and only one meaning is shared across languages, the type-level embedding similarity is reduced** (because the embedding must represent all senses). However, **contextualized embeddings in appropriate context recover the cross-lingual alignment** for the shared sense. The model effectively disambiguates when given context.
+
+### Implications
+- **For practitioners**: Use contextualized (in-sentence) embeddings rather than isolated word embeddings when working with polysemous words cross-lingually. Layer 10 provides the best sense-discriminative alignment.
+- **For researchers**: Polysemy is a systematic confound in cross-lingual evaluation that should be controlled for. Centering is essential for fair similarity comparison.
+- **For model developers**: The polysemy penalty suggests that sense-aware training objectives could improve cross-lingual alignment quality.
+
+### Confidence in Findings
+**High confidence** for H1-H3: Large sample sizes (1,000–5,000 per condition), massive effect sizes (d &gt; 1.0 for key comparisons), consistent results across models and language pairs, and p-values far below any reasonable significance threshold. **Moderate confidence** for H4: The layer analysis shows clear trends but was conducted on only 3 language pairs.
+
+---
+
+## 7. Limitations
+
+1. **WordNet coverage**: Polysemy classification relies on English WordNet, which may not perfectly reflect a word&#39;s semantic complexity (e.g., technical terms may have one synset but multiple pragmatic uses).
+2. **Type-level embeddings from contextual models**: Feeding isolated words to models designed for sentences may not produce optimal representations. However, this is standard practice in the literature.
+3. **Language pair selection**: Only English-centric pairs tested; future work should examine non-English pairs (e.g., FR-DE, ZH-RU).
+4. **Model selection**: Only base-sized models tested. Large models (XLM-R-large) may show different patterns.
+5. **MUSE dictionary quality**: Some MUSE entries may contain errors or context-dependent translations.
+6. **Centering is a simplistic debiasing**: More sophisticated methods (e.g., RCSLS, Procrustes alignment) might further improve results.
+
+---
+
+## 8. Next Steps
+
+### Immediate Follow-ups
+1. **Test larger models**: XLM-R-large (550M params) may show stronger alignment and different polysemy effects
+2. **Fine-grained sense analysis**: Use BabelNet to classify polysemy on both sides (source and target language)
+3. **Sentence-level extension**: Test whether sentence-level embeddings show similar polysemy effects
+
+### Alternative Approaches
+- **Probing classifiers**: Train linear probes to predict sense identity from embeddings, measuring how much sense information is encoded
+- **Cluster analysis**: Cluster contextualized embeddings of polysemous words to visualize sense representations
+- **Alignment methods**: Apply Procrustes alignment before measuring similarity to control for rotational differences
+
+### Open Questions
+1. Does fine-tuning on parallel data reduce the polysemy penalty?
+2. How do decoder-only multilingual models (e.g., BLOOM, Llama) compare?
+3. Is the polysemy effect larger for words where different senses have different translations in the target language?
+
+---
+
+## 9. References
+
+1. Wu, S. &amp; Conneau, A. (2020). Emerging Cross-lingual Structure in Pretrained Language Models. ACL 2020.
+2. Conneau, A. et al. (2020). Unsupervised Cross-lingual Representation Learning at Scale (XLM-R). ACL 2020.
+3. Pires, T. et al. (2019). How Multilingual is Multilingual BERT? ACL 2019.
+4. Libovický, J. et al. (2020). On the Language Neutrality of Pre-trained Multilingual Representations. EMNLP 2020.
+5. Zhang, M. et al. (2019). Cross-Lingual Contextual Word Embeddings Mapping With Multi-Sense Words In Mind. EMNLP 2019.
+6. Upadhyay, S. et al. (2017). Beyond Bilingual: Multi-sense Word Embeddings using Multilingual Context. RepL4NLP at ACL 2017.
+7. Camacho-Collados, J. et al. (2017). SemEval-2017 Task 2: Multilingual and Cross-lingual Semantic Word Similarity. SemEval 2017.
+8. Martelli, F. et al. (2021). SemEval-2021 Task 2: Multilingual and Cross-lingual Word-in-Context Disambiguation. SemEval 2021.
+9. Ruder, S. et al. (2019). A Survey of Cross-lingual Word Embedding Models. JAIR.
+10. Dufter, P. &amp; Schütze, H. (2021). First Align, then Predict: Understanding the Cross-Lingual Ability of Multilingual BERT. EACL 2021.
+
+---
+
+## Appendix: File Locations
+
+| Output | Path |
+|--------|------|
+| All experiment results | `results/all_results.json` |
+| Layer analysis results | `results/exp3_layer_analysis.json` |
+| Experiment 1 plots | `results/plots/exp1_*.png` |
+| Experiment 2 plots | `results/plots/exp2_*.png` |
+| Experiment 3 plots | `results/plots/exp3_*.png` |
+| Experiment 4 plots | `results/plots/exp4_*.png` |
+| Main experiment code | `src/experiment.py` |
+| Visualization code | `src/visualize.py` |
+| Layer analysis code | `src/exp3_layer_analysis.py` |
+| Planning document | `planning.md` |
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: Cross-Lingual Embedding Similarity and Polysemy
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Modern multilingual models (mBERT, XLM-R) serve billions of users across 100+ languages. Understanding whether translation equivalents share similar embeddings — and how polysemy disrupts this — is critical for cross-lingual NLP applications (machine translation, cross-lingual information retrieval, multilingual search). If polysemous words with partially overlapping senses still share high similarity, it validates the robustness of multilingual representations; if not, it reveals a systematic weakness that affects downstream applications.
+
+### Gap in Existing Work
+Based on our literature review:
+- Wu &amp; Conneau (2020) showed cross-lingual structure emerges even without shared vocabulary, but did not directly measure embedding similarity of translation pairs or analyze polysemy effects.
+- Zhang et al. (2019) showed polysemy hurts cross-lingual alignment, but only studied static embeddings and supervised alignment, not modern contextual models.
+- Upadhyay et al. (2017) proposed multi-sense multilingual embeddings, but pre-dates modern transformers.
+- **No systematic study** measures how the number of word senses and sense distribution affects cross-lingual embedding similarity in modern contextual models (mBERT, XLM-R) at both the **type level** (decontextualized) and **token level** (contextualized).
+
+### Our Novel Contribution
+We conduct the first systematic comparison of cross-lingual embedding similarity for monosemous vs. polysemous words in modern multilingual transformers, examining:
+1. Whether translation equivalents have similar embeddings (type-level and token-level)
+2. Whether polysemy degrades this similarity
+3. Whether contextualized embeddings (in specific sense contexts) recover the similarity that type-level embeddings lose due to polysemy
+4. How these effects vary across language pairs and model layers
+
+### Experiment Justification
+- **Experiment 1 (Translation pair similarity)**: Establishes the baseline finding — do translation equivalents have similar embeddings? Uses MUSE dictionaries for large-scale measurement.
+- **Experiment 2 (Monosemous vs. polysemous)**: Tests the core polysemy hypothesis — does having multiple senses reduce cross-lingual similarity? Uses WordNet sense counts.
+- **Experiment 3 (Contextualized sense-level similarity)**: Tests whether providing sense-disambiguating context recovers similarity. Uses MCL-WiC dataset.
+- **Experiment 4 (Cross-lingual word similarity correlation)**: Validates against human judgments on SemEval-2017 Task 2.
+
+## Research Question
+Do words with similar meanings in different languages have similar embeddings in multilingual models? Specifically, if a word has multiple meanings and only one meaning is shared across languages, how does this polysemy affect embedding similarity?
+
+## Hypothesis Decomposition
+- **H1**: Translation equivalents have significantly higher cosine similarity than random word pairs in multilingual model embeddings.
+- **H2**: Monosemous translation pairs have higher cosine similarity than polysemous translation pairs.
+- **H3**: For polysemous words, contextualized embeddings in sense-matched contexts have higher similarity than in sense-mismatched contexts.
+- **H4**: The polysemy effect varies across model layers, with middle layers showing the best cross-lingual alignment.
+
+## Proposed Methodology
+
+### Approach
+We extract embeddings from two multilingual transformer models (mBERT, XLM-R-base) for translation pairs from MUSE bilingual dictionaries. We classify words as monosemous (1 WordNet synset) or polysemous (2+ synsets) and compare embedding similarity distributions. For contextualized analysis, we use the MCL-WiC dataset which provides words in context with same/different sense labels. We also evaluate on SemEval-2017 Task 2 cross-lingual similarity.
+
+### Experimental Steps
+
+1. **Data Preparation**
+   - Load MUSE EN-FR, EN-DE, EN-ES, EN-RU, EN-ZH dictionaries
+   - Query WordNet for English word sense counts
+   - Classify pairs as monosemous (1 sense) vs. polysemous (2+ senses)
+   - Sample balanced sets for fair comparison
+
+2. **Experiment 1: Type-level similarity of translation pairs**
+   - Extract [CLS] or mean-pooled embeddings for isolated words
+   - Compute cosine similarity for all translation pairs
+   - Compare against random (non-translation) pairs as control
+   - Apply centering (Libovicky et al. 2020) to remove language bias
+   - Analyze across layers and models
+
+3. **Experiment 2: Monosemous vs. polysemous comparison**
+   - Split translation pairs by polysemy category
+   - Compare cosine similarity distributions
+   - Statistical test: Mann-Whitney U test (non-parametric)
+   - Control for word frequency
+   - Analyze by number of senses (1, 2-3, 4-5, 6+)
+
+4. **Experiment 3: Contextualized (sense-level) analysis with MCL-WiC**
+   - Extract contextualized embeddings for target words in context
+   - Compare similarity for same-sense (T) vs. different-sense (F) pairs
+   - Test whether context recovers cross-lingual alignment for polysemous words
+
+5. **Experiment 4: Cross-lingual word similarity (SemEval-2017)**
+   - Compute model-based similarity for SemEval word pairs
+   - Correlate with human ratings (Spearman)
+   - Compare models and layers
+
+### Baselines
+- Random word pairs (negative control for H1)
+- Monosemous words (positive control for H2)
+- Raw vs. centered embeddings (Libovicky et al. 2020)
+
+### Evaluation Metrics
+- **Cosine similarity**: Primary metric for embedding alignment
+- **Mann-Whitney U test**: For comparing distributions (monosemous vs. polysemous)
+- **Cohen&#39;s d**: Effect size for practical significance
+- **Spearman correlation**: For SemEval-2017 evaluation
+- **Accuracy**: For MCL-WiC evaluation
+
+### Statistical Analysis Plan
+- Mann-Whitney U test for comparing similarity distributions (non-parametric, appropriate for cosine similarity which may not be normally distributed)
+- Significance level: α = 0.05 with Bonferroni correction for multiple comparisons
+- Effect sizes via Cohen&#39;s d and rank-biserial correlation
+- Bootstrap 95% confidence intervals for mean similarities
+- Spearman rank correlation for SemEval evaluation
+
+## Expected Outcomes
+- **H1 supported**: Translation equivalents should have cosine similarity &gt;&gt; random pairs (expected: 0.5-0.8 vs. 0.0-0.2)
+- **H2 supported**: Monosemous pairs should have ~5-15% higher similarity than polysemous pairs
+- **H3 supported**: Same-sense contextualized pairs should show higher similarity than different-sense pairs
+- **H4**: Middle layers (4-8 out of 12) expected to show best alignment, based on prior work
+
+## Timeline and Milestones
+- Phase 2 (Setup): 15 min — environment, install packages, validate data
+- Phase 3 (Implementation): 60 min — write experiment scripts
+- Phase 4 (Experiments): 60 min — run all experiments
+- Phase 5 (Analysis): 30 min — statistical tests and visualizations
+- Phase 6 (Documentation): 30 min — REPORT.md and README.md
+
+## Potential Challenges
+1. **Subword tokenization**: Multilingual models tokenize words into subword pieces; need mean-pooling strategy
+2. **WordNet coverage**: WordNet only covers English; polysemy classification relies on EN side
+3. **Language bias in embeddings**: Raw cosine similarity affected by language-specific offsets; centering helps
+4. **GPU memory**: Large batch processing needed; 2x RTX 3090 provides ample memory
+5. **OOV words**: Some MUSE dictionary words may not be in model vocabulary
+
+## Success Criteria
+1. Clear statistical evidence for/against each hypothesis (p-values, effect sizes)
+2. Reproducible results across models and language pairs
+3. Meaningful visualizations that illustrate findings
+4. Complete REPORT.md with actual experimental data
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Do Words with Similar Meanings in Different Languages Have Similar Embeddings?
+
+## Research Area Overview
+
+This research examines whether words with equivalent meanings across different languages are represented similarly in multilingual embedding models (such as mBERT, XLM-R, and cross-lingual word embeddings). The hypothesis extends to consider how polysemy (words with multiple meanings) affects this similarity: if only one sense of a polysemous word is shared across languages, the overall embedding similarity may be diluted.
+
+The field sits at the intersection of **cross-lingual word embeddings**, **multilingual pretrained language models**, and **word sense disambiguation**. Research over the past decade has established that (1) embedding spaces across languages are approximately isomorphic, (2) multilingual models learn to align translation equivalents even without explicit parallel data, and (3) polysemy complicates this alignment.
+
+---
+
+## Key Papers
+
+### 1. Emerging Cross-lingual Structure in Pretrained Language Models
+- **Authors**: Wu &amp; Conneau (2020)
+- **Source**: ACL 2020 (arXiv:1911.01464)
+- **Key Contribution**: First detailed ablation study showing that cross-lingual representations emerge in multilingual BERT even without shared vocabulary or domain similarity.
+- **Methodology**: Trained bilingual masked language models varying shared vocabulary (anchor points), parameter sharing, and domain. Used Procrustes alignment and CKA similarity to compare representations.
+- **Key Findings**:
+  - Parameter sharing is the most important factor for cross-lingual transfer; shared vocabulary (anchor points) contributes only a few points.
+  - Even with zero shared vocabulary, cross-lingual transfer is still effective.
+  - Monolingual BERT models trained independently in different languages learn representations that can be aligned via simple linear mappings (Procrustes), achieving decent bilingual dictionary induction.
+  - Early transformer layers are more similar across languages than later layers.
+  - More closely related languages show stronger alignment effects.
+- **Datasets Used**: XNLI, WikiAnn NER, Universal Dependencies parsing, MUSE bilingual dictionaries, Tatoeba sentence retrieval.
+- **Relevance**: **Directly supports our hypothesis** - shows words with similar meanings across languages get similar representations even without explicit cross-lingual signals. The &#34;universal latent symmetries&#34; finding is central to our research question.
+
+### 2. A Survey of Cross-lingual Word Embedding Models
+- **Authors**: Ruder, Vulic, Sogaard (2019)
+- **Source**: JAIR (arXiv:1706.04902)
+- **Key Contribution**: Comprehensive typology of cross-lingual word embedding methods, comparing data requirements and objective functions.
+- **Methodology**: Survey of mapping-based, pseudo-bilingual, joint methods. Analysis of evaluation approaches.
+- **Key Findings**:
+  - Many seemingly different CLWE models optimize equivalent objectives.
+  - The foundational insight (Mikolov et al., 2013) that word embedding spaces across languages are approximately isomorphic enables linear mapping between them.
+  - Evaluation typically uses bilingual lexicon induction (BLI), cross-lingual word similarity, and downstream tasks.
+- **Relevance**: Provides theoretical foundation and taxonomy for understanding why translation equivalents cluster together in embedding spaces.
+
+### 3. How Multilingual is Multilingual BERT?
+- **Authors**: Pires, Schlinger, Garrette (2019)
+- **Source**: ACL 2019 (arXiv:2004.09813)
+- **Key Contribution**: Empirical study of mBERT&#39;s cross-lingual generalization abilities.
+- **Key Findings**:
+  - mBERT creates multilingual representations even for language pairs with no common words.
+  - Transfer is better for typologically similar languages.
+  - Word-piece overlap contributes to but is not necessary for cross-lingual transfer.
+- **Relevance**: Confirms that similar-meaning words get similar representations in mBERT.
+
+### 4. Unsupervised Cross-lingual Representation Learning at Scale (XLM-R)
+- **Authors**: Conneau et al. (2020)
+- **Source**: ACL 2020 (arXiv:1911.02116)
+- **Key Contribution**: XLM-R - a multilingual model trained on 100 languages that significantly outperforms mBERT.
+- **Key Findings**:
+  - Scaling up monolingual data and model capacity improves cross-lingual transfer.
+  - Trade-off between positive transfer (shared representations help) and capacity dilution (too many languages hurt).
+  - XLM-R is competitive with strong monolingual models, showing multilingual modeling need not sacrifice per-language performance.
+- **Relevance**: Establishes XLM-R as the state-of-the-art model for investigating cross-lingual embedding similarity.
+
+### 5. Beyond Bilingual: Multi-sense Word Embeddings using Multilingual Context
+- **Authors**: Upadhyay, Chang, Taddy, Kalai, Zou (2017)
+- **Source**: RepL4NLP Workshop at ACL 2017
+- **Key Contribution**: First multilingual (not just bilingual) approach for learning multi-sense word embeddings.
+- **Methodology**: Multi-view Bayesian non-parametric algorithm that uses multilingual parallel corpora to learn different vectors for each sense of a word. Uses English as bridge language.
+- **Key Findings**:
+  - Different senses of a word may translate to the same word in one language but different words in another (e.g., &#34;interest&#34; maps to same French word but different Chinese words depending on sense).
+  - Multilingual training significantly improves sense disambiguation over bilingual training.
+  - Using multiple languages helps resolve polysemy that survives in any single translation.
+- **Relevance**: **Directly relevant to the polysemy aspect of our hypothesis**. Demonstrates that polysemy is a key challenge for cross-lingual embedding similarity, and multilingual context helps resolve it.
+
+### 6. SemEval-2017 Task 2: Multilingual and Cross-lingual Semantic Word Similarity
+- **Authors**: Camacho-Collados, Pilehvar, Collier, Navigli (2017)
+- **Source**: SemEval 2017
+- **Key Contribution**: High-quality benchmark for multilingual and cross-lingual word similarity across 5 languages (EN, DE, ES, IT, FA).
+- **Methodology**: 500 manually curated word pairs per language, covering 34 domains. Cross-lingual datasets for 10 language pairs. Inter-annotator agreement ~0.9.
+- **Key Findings**:
+  - Systems combining word embeddings with lexical resources perform best.
+  - Cross-lingual similarity is harder than monolingual, especially for distant language pairs.
+- **Datasets**: Available for direct use in experiments.
+- **Relevance**: **Primary evaluation benchmark** for our experiments on cross-lingual word similarity.
+
+### 7. SemEval-2021 Task 2: MCL-WiC (Multilingual and Cross-lingual Word-in-Context Disambiguation)
+- **Authors**: Martelli, Kalach, Tola, Navigli (2021)
+- **Source**: SemEval 2021
+- **Key Contribution**: First manually-annotated dataset for multilingual and cross-lingual word-in-context disambiguation across 5 languages (AR, ZH, EN, FR, RU).
+- **Methodology**: Binary classification - determine if a target word in two contexts (same or different language) has the same meaning.
+- **Key Findings**:
+  - XLM-R based systems achieve best performance.
+  - Cross-lingual WiC is harder than monolingual.
+  - Covers all open-class parts of speech.
+- **Relevance**: **Key dataset for testing the polysemy aspect** of our hypothesis - whether multilingual models can distinguish same vs. different senses across languages.
+
+### 8. Cross-Lingual Contextual Word Embeddings Mapping With Multi-Sense Words In Mind
+- **Authors**: Zhang, Yin, Zhu, Zweigenbaum (2019)
+- **Source**: EMNLP 2019
+- **Key Contribution**: Shows that multi-sense words pose specific challenges for cross-lingual contextual embedding alignment.
+- **Methodology**: Proposes noise removal and cluster-level averaging for multi-sense anchors during alignment.
+- **Key Findings**:
+  - Multi-sense words act as noise in supervised cross-lingual alignment.
+  - Removing or replacing multi-sense embeddings during alignment improves bilingual lexicon induction by &gt;10 points for unsupervised methods.
+- **Relevance**: **Directly tests our hypothesis about polysemy affecting cross-lingual similarity**. Shows that polysemous words indeed have less similar embeddings across languages.
+
+### 9. On the Language Neutrality of Pre-trained Multilingual Representations
+- **Authors**: Libovicky, Rosa, Fraser (2020)
+- **Source**: EMNLP 2020 (arXiv:2005.00396)
+- **Key Contribution**: Studies whether mBERT representations are truly language-neutral.
+- **Key Findings**:
+  - mBERT representations are NOT language-neutral - there&#39;s a strong language-specific component.
+  - After centering (removing language-specific mean), cross-lingual similarity improves significantly.
+  - Language identity can be decoded from any layer.
+- **Relevance**: Shows that raw cosine similarity between translation equivalents may be affected by language-specific bias, which needs to be accounted for in experiments.
+
+### 10. SensEmBERT: Context-Enhanced Sense Embeddings for Multilingual Word Sense Disambiguation
+- **Authors**: Scarlini, Pasini, Navigli (2020)
+- **Source**: ACL 2020
+- **Key Contribution**: Creates sense embeddings for all WordNet senses using BERT contextualized embeddings, then extends to multilingual setting via BabelNet.
+- **Relevance**: Provides methodology for creating sense-specific embeddings from contextual models, useful for testing how individual word senses align cross-lingually.
+
+### 11. Making Monolingual Sentence Embeddings Multilingual Using Knowledge Distillation
+- **Authors**: Reimers &amp; Gurevych (2020)
+- **Source**: EMNLP 2020 (arXiv:2004.09714)
+- **Key Contribution**: Method for extending sentence-BERT to 50+ languages using knowledge distillation.
+- **Relevance**: Shows that sentence-level meaning can be aligned across languages, extending the word-level findings.
+
+### 12. First Align, then Predict: Understanding the Cross-Lingual Ability of Multilingual BERT
+- **Authors**: Dufter &amp; Schutze (2021)
+- **Source**: EACL 2021
+- **Key Contribution**: Systematic study of what makes mBERT cross-lingual.
+- **Key Findings**:
+  - Shared position embeddings and special tokens are sufficient for cross-lingual transfer.
+  - The model learns to align same-meaning tokens across languages.
+- **Relevance**: Further evidence that meaning similarity drives cross-lingual representation alignment.
+
+---
+
+## Common Methodologies
+
+### Evaluation Approaches
+1. **Bilingual Lexicon Induction (BLI)**: Given a source word, retrieve its translation from the target embedding space. Uses CSLS or nearest-neighbor retrieval. Evaluated by Precision@1/5/10. (Used in: Ruder et al., Wu &amp; Conneau, MUSE, VecMap)
+2. **Cross-lingual Word Similarity**: Measure correlation between model-predicted similarity and human judgments for word pairs across languages. (Used in: SemEval-2017 Task 2)
+3. **Word-in-Context Disambiguation**: Binary classification - do two word occurrences (possibly in different languages) share the same meaning? (Used in: MCL-WiC)
+4. **Representation Similarity Analysis**: CKA, SVCCA, or Procrustes alignment to measure structural similarity of embedding spaces. (Used in: Wu &amp; Conneau)
+
+### Alignment Methods
+- **Procrustes alignment**: Linear orthogonal mapping between embedding spaces (Mikolov et al., 2013; Smith et al., 2017)
+- **Adversarial alignment**: Unsupervised alignment using GANs (Conneau et al., 2017 - MUSE)
+- **Joint training**: Multilingual masked language modeling (mBERT, XLM-R)
+
+---
+
+## Standard Baselines
+
+1. **mBERT** (Devlin et al., 2019): Multilingual BERT trained on 104 languages&#39; Wikipedia
+2. **XLM-R** (Conneau et al., 2020): Cross-lingual model trained on 100 languages from CommonCrawl
+3. **FastText aligned embeddings**: Static word embeddings aligned via MUSE or VecMap
+4. **LASER** (Artetxe &amp; Schwenk, 2019): Massively multilingual sentence embeddings
+
+---
+
+## Evaluation Metrics
+
+- **Precision@1/5/10**: For bilingual lexicon induction
+- **Spearman/Pearson correlation**: For word similarity tasks
+- **Accuracy/F1**: For WiC disambiguation
+- **Cosine similarity**: Direct measurement of embedding similarity
+- **CKA (Centered Kernel Alignment)**: For structural similarity of representation spaces
+
+---
+
+## Datasets in the Literature
+
+| Dataset | Languages | Task | Used In |
+|---------|-----------|------|---------|
+| MUSE Dictionaries | 110 language pairs | BLI | Wu &amp; Conneau, many CLWE papers |
+| SemEval-2017 Task 2 | EN, DE, ES, IT, FA + cross-lingual pairs | Word similarity | Camacho-Collados et al. |
+| MCL-WiC | AR, ZH, EN, FR, RU | Word-in-context disambiguation | Martelli et al. |
+| XNLI | 15 languages | NLI transfer | Wu &amp; Conneau, Conneau et al. |
+| Tatoeba | 112 languages | Sentence retrieval | Wu &amp; Conneau, Reimers |
+| WordSim-353 (translated) | Multiple | Word similarity | Various |
+| SimLex-999 (translated) | Multiple | Word similarity | Various |
+
+---
+
+## Gaps and Opportunities
+
+1. **Direct measurement of translation equivalent similarity**: Most papers study cross-lingual transfer on downstream tasks rather than directly measuring embedding similarity of translation pairs. Our research can fill this gap.
+
+2. **Polysemy effects on cross-lingual similarity**: While Zhang et al. (2019) show polysemy hurts alignment, and Upadhyay et al. (2017) show multilingual context helps, no systematic study measures how the number of senses and sense distribution affects cross-lingual embedding similarity in modern models like XLM-R.
+
+3. **Sense-level cross-lingual similarity**: The MCL-WiC dataset enables testing whether specific senses (rather than type-level embeddings) are more aligned cross-lingually.
+
+4. **Language family effects**: The literature consistently shows that closely related languages align better, but the interaction between language distance and polysemy is unexplored.
+
+---
+
+## Recommendations for Our Experiment
+
+### Recommended Datasets
+1. **MUSE bilingual dictionaries** - For direct measurement of translation equivalent embedding similarity (downloaded)
+2. **SemEval-2017 Task 2** - For evaluating graded cross-lingual word similarity (downloaded)
+3. **MCL-WiC** - For testing sense-level cross-lingual disambiguation (downloaded)
+
+### Recommended Models
+1. **mBERT** (`bert-base-multilingual-cased`) - Widely used baseline
+2. **XLM-R** (`xlm-roberta-base` and `xlm-roberta-large`) - State-of-the-art multilingual model
+3. **FastText aligned embeddings** (via MUSE) - Static embedding baseline
+
+### Recommended Metrics
+1. **Cosine similarity** of translation pair embeddings
+2. **Spearman correlation** with human similarity judgments
+3. **BLI Precision@1** as a proxy for embedding alignment quality
+4. **Accuracy** on MCL-WiC cross-lingual disambiguation
+
+### Experimental Design Suggestions
+1. **Experiment 1**: Measure average cosine similarity of translation equivalents from MUSE dictionaries in mBERT/XLM-R embeddings. Compare monosemous vs. polysemous words.
+2. **Experiment 2**: Evaluate cross-lingual word similarity on SemEval-2017 Task 2 using different models and layers.
+3. **Experiment 3**: Test MCL-WiC cross-lingual disambiguation - analyze whether sense-matched pairs have higher embedding similarity than sense-mismatched pairs.
+4. **Experiment 4**: For polysemous words with translations sharing only one sense, measure embedding similarity vs. monosemous translation pairs.
+
+### Methodological Considerations
+- Use **mean-pooled subword embeddings** for word-level representations from contextual models.
+- Apply **centering** (Libovicky et al., 2020) to remove language-specific bias before computing similarity.
+- Compare across **different layers** - early layers may be more language-neutral (Wu &amp; Conneau).
+- Control for **word frequency** - rare words may have less stable embeddings.
+- Use **WordNet** or **BabelNet** to determine number of senses per word for polysemy analysis.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+3. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+4. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+5. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+6. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+7. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+8. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+9. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Create paper_draft/commands/ directory with:
+   - math.tex: Math notation macros (copy from templates/paper_writing/commands/)
+   - general.tex: Formatting macros (copy from templates/paper_writing/commands/)
+   - macros.tex: Project-specific term definitions
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read templates/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

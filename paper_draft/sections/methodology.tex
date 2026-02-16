@@ -1,0 +1,71 @@
+\section{Methodology}
+\label{sec:method}
+
+We design four experiments to test how polysemy affects cross-lingual embedding alignment.
+\Secref{sec:models} describes the models, \secref{sec:data} the datasets, \secref{sec:embedding} the embedding extraction procedure, and \secref{sec:experiments} the experimental protocol.
+
+\subsection{Models}
+\label{sec:models}
+
+We evaluate two widely used multilingual transformers:
+
+\para{\mbert} (\texttt{bert-base-multilingual-cased})~\citep{devlin2019bert}: A 12-layer, 178M-parameter transformer trained on Wikipedia text from 104 languages with a shared WordPiece vocabulary of 110K tokens.
+
+\para{\xlmr} (\texttt{xlm-roberta-base})~\citep{conneau2020unsupervised}: A 12-layer, 278M-parameter transformer trained on CommonCrawl data from 100 languages with a SentencePiece vocabulary of 250K tokens. \xlmr uses more training data and a larger vocabulary than \mbert, and generally achieves stronger downstream performance.
+
+Both models use subword tokenization, so multi-token words require aggregation (see \secref{sec:embedding}).
+
+\subsection{Datasets}
+\label{sec:data}
+
+\para{\muse Bilingual Dictionaries}~\citep{conneau2018word} provide translation pairs for 110 language pairs. We use EN--FR, EN--DE, EN--ES, EN--RU, and EN--ZH, sampling up to 5{,}000 single-word, alphabetic pairs per language pair after deduplication. These pairs serve as the foundation for Experiments~1 and~2.
+
+\para{\semeval Task~2}~\citep{camacho2017semeval} provides 500 manually curated word pairs per language with graded similarity scores (inter-annotator agreement $\approx$~0.9). We use the cross-lingual subsets EN--DE, EN--ES, EN--IT, and EN--FA (914--978 pairs per pair after filtering). This dataset validates our similarity measurements against human judgments (Experiment~4).
+
+\para{\mclwic}~\citep{martelli2021semeval} provides 1{,}000 sentence pairs per cross-lingual setting (EN--FR, EN--ZH, EN--RU), each labeled as same-sense (T) or different-sense (F) for a shared target word. The dataset is balanced with 500 examples per label. We use this for Experiment~3, which tests sense-level cross-lingual alignment.
+
+\para{Polysemy classification.}
+We classify English words by the number of synsets in \wordnet~\citep{miller1995wordnet}: \textit{monosemous} (1 synset; 767--1{,}010 words per language pair), \textit{polysemous} (2--4 synsets; 954--1{,}347 words), and \textit{highly polysemous} (5+ synsets; 617--1{,}001 words).
+
+\subsection{Embedding Extraction}
+\label{sec:embedding}
+
+\para{Subword aggregation.}
+Both models tokenize words into subword units.
+We compute word-level embeddings by mean-pooling subword token representations, excluding special tokens (\texttt{[CLS]}, \texttt{[SEP]} for \mbert; \texttt{<s>}, \texttt{</s>} for \xlmr).
+
+\para{Language-specific centering.}
+Following \citet{libovicky2020language}, we remove the language-specific bias by subtracting the per-language mean embedding:
+\begin{equation}
+\label{eq:centering}
+\tilde{\vx}_i^{(\ell)} = \vx_i^{(\ell)} - \frac{1}{|\gD_\ell|}\sum_{j \in \gD_\ell} \vx_j^{(\ell)},
+\end{equation}
+where $\vx_i^{(\ell)}$ is the embedding of word~$i$ in language~$\ell$ and $\gD_\ell$ is the set of all words in language~$\ell$. This removes the language-identity component that inflates within-language similarity and deflates cross-lingual similarity.
+
+\para{Similarity metric.}
+We use cosine similarity between centered embeddings:
+\begin{equation}
+\label{eq:cosine}
+\cossim(\tilde{\vx}, \tilde{\vy}) = \frac{\tilde{\vx} \cdot \tilde{\vy}}{\|\tilde{\vx}\| \cdot \|\tilde{\vy}\|}.
+\end{equation}
+
+For type-level experiments (Experiments~1, 2, 4), we feed isolated words to the model.
+For token-level experiments (Experiment~3), we feed full sentences and extract the contextualized embedding of the target word.
+
+\subsection{Experimental Protocol}
+\label{sec:experiments}
+
+\para{Experiment 1: Translation pair similarity.}
+For each language pair, we compute cosine similarity for all translation pairs and for shuffled (random) control pairs, then test whether translation similarity exceeds random similarity using the Mann--Whitney $U$ test. We report \cohensd as the effect size.
+
+\para{Experiment 2: Polysemy effect on similarity.}
+We split translation pairs by \wordnet polysemy category and compare similarity distributions across categories using Mann--Whitney $U$ tests. We also compute the Spearman rank correlation between sense count and cosine similarity.
+
+\para{Experiment 3: Contextualized sense-level similarity.}
+Using \mclwic, we extract contextualized embeddings for target words in their sentence contexts and compare cosine similarity for same-sense (T) vs.\ different-sense (F) pairs. We analyze this across layers 1, 4, 7, 10, and~12 to identify which layers best discriminate senses cross-lingually.
+
+\para{Experiment 4: Correlation with human judgments.}
+We compute cosine similarity for \semeval word pairs and correlate with human gold scores using Spearman and Pearson correlations. This validates that our embedding similarities reflect human notions of semantic similarity.
+
+\para{Statistical testing.}
+All comparisons use the Mann--Whitney $U$ test (non-parametric, appropriate for cosine similarity distributions). We report Cohen's $d$ for effect sizes and use $\alpha = 0.001$ as the significance threshold, which is conservative given our large sample sizes.
