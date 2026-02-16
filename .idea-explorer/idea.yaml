@@ -1,0 +1,23 @@
+idea:
+  title: Do words with similar meanings in different languages have similar embeddings
+  domain: nlp
+  hypothesis: 'Words with similar meanings in different languages will have similar
+    embeddings in multilingual models. If words have multiple meanings, and only one
+    meaning is similar across languages, the embeddings may still be similar, but
+    this similarity could be affected by the presence of other, dissimilar meanings.
+
+    '
+  background:
+    description: Nowadays models are able to handle vocabularies from multiple languages.
+      If two words have pretty similar meanings in different languages, they might
+      have similar embeddings as well. One follow-up question is, if the words have
+      multiple meanings, and one of the meanings is pretty similar but others are
+      not, will the embedding still be similar?
+  metadata:
+    source: IdeaHub
+    source_url: https://hypogenic.ai/ideahub/idea/GBXyrHRKdBOZl28EvL46
+    idea_id: do_words_with_similar_meanings_20260215_192906_066e7c22
+    created_at: '2026-02-15T19:29:06.469502'
+    status: submitted
+    github_repo_name: similar-embeddings-nlp-f3b7-claude
+    github_repo_url: https://github.com/Hypogenic-AI/similar-embeddings-nlp-f3b7-claude
